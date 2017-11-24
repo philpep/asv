@@ -303,3 +303,27 @@ def test_run_build_failure(basic_conf):
 
     # Check that parameters were also saved
     assert data_broken['params'] == data_ok['params']
+
+
+def test_benchmark_param_selection(basic_conf):
+    tmpdir, local, conf, machine_file = basic_conf
+    conf.matrix = {}
+    tools.generate_test_repo(tmpdir, values=[(1, 2, 3)])
+    tools.run_asv_with_conf(conf, 'run', '--show-stderr',
+                            '--bench', 'track_param_selection\(.*, 3\)',
+                            _machine_file=machine_file)
+
+    def result():
+        results = util.load_json(glob.glob(join(
+            tmpdir, 'results_workflow', 'orangutan', '*-*.json'))[0])
+        return results['results'][
+            'params_examples.track_param_selection']['result']
+
+    assert result() == [4, None, 5, None]
+    tools.run_asv_with_conf(conf, 'run', '--show-stderr',
+                            '--bench', 'track_param_selection\(1, ',
+                            _machine_file=machine_file)
+    assert result() == [4, 6, 5, None]
+    tools.run_asv_with_conf(conf, 'run', '--show-stderr',
+                            '--bench', 'track_param_selection',
+                            _machine_file=machine_file)

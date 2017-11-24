@@ -61,7 +61,7 @@ def test_find_benchmarks(tmpdir):
     assert len(b) == 3
 
     b = benchmarks.Benchmarks(conf, repo, envs, regex='example')
-    assert len(b) == 25
+    assert len(b) == 26
 
     b = benchmarks.Benchmarks(conf, repo, envs, regex='time_example_benchmark_1')
     assert len(b) == 2
@@ -77,8 +77,19 @@ def test_find_benchmarks(tmpdir):
     assert b['custom.time_function']['pretty_name'] == 'My Custom Function'
     assert b['named.track_custom_pretty_name']['pretty_name'] == 'this.is/the.answer'
 
+    # benchmark param selection with regex
+    b = benchmarks.Benchmarks(conf, repo, envs, regex='track_param_selection\(.*, 3\)')
+    assert list(b.keys()) == ['params_examples.track_param_selection']
+    assert b['params_examples.track_param_selection']['_selected_idx'] == [0, 2]
+    b = benchmarks.Benchmarks(conf, repo, envs, regex='track_param_selection\(1, ')
+    assert list(b.keys()) == ['params_examples.track_param_selection']
+    assert b['params_examples.track_param_selection']['_selected_idx'] == [0, 1]
+    b = benchmarks.Benchmarks(conf, repo, envs, regex='track_param_selection')
+    assert list(b.keys()) == ['params_examples.track_param_selection']
+    assert b['params_examples.track_param_selection']['_selected_idx'] == [0, 1, 2, 3]
+
     b = benchmarks.Benchmarks(conf, repo, envs)
-    assert len(b) == 34
+    assert len(b) == 35
 
     start_timestamp = datetime.datetime.utcnow()
 

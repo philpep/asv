@@ -265,7 +265,9 @@ def human_value(value, unit, err=None):
             if err is not None:
                 display += "±{:.2g}".format(err)
     elif value is None:
-        display = "failed"
+        display = 'failed'
+    elif value in ('failed', 'skipped'):
+        display = value
     else:
         display = json.dumps(value)
 

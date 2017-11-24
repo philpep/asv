@@ -120,6 +120,10 @@ def run_benchmark(benchmark, root, env, show_stderr=False,
         result['started_at'] = datetime.datetime.utcnow()
 
         for param_idx, params in param_iter:
+            if benchmark['params'] and param_idx not in benchmark['_selected_idx']:
+                bench_results.append(dict(samples=None, number=None, result='skipped', stats=None))
+                bench_profiles.append(None)
+                continue
             success, data, profile_data, err, out, errcode = \
                 _run_benchmark_single(
                     benchmark, root, env, param_idx,
@@ -145,7 +149,7 @@ def run_benchmark(benchmark, root, env, show_stderr=False,
                     bench_profiles.append(profile_data)
             else:
                 failure_count += 1
-                bench_results.append(dict(samples=None, number=None, result=None, stats=None))
+                bench_results.append(dict(samples=None, number=None, result='failed', stats=None))
                 bench_profiles.append(None)
                 if data is not None:
                     bad_output = data
@@ -230,6 +234,8 @@ def run_benchmark(benchmark, root, env, show_stderr=False,
             with log.indent():
                 log.error(result['stderr'])
 
+        result['result'] = [None if x in ('skipped', 'failed') else x
+                            for x in result['result']]
         return result
 
 
@@ -345,8 +351,15 @@ class Benchmarks(dict):
         self._all_benchmarks = {}
         for benchmark in benchmarks:
             self._all_benchmarks[benchmark['name']] = benchmark
-            if not regex or any(re.search(reg, benchmark['name']) for reg in regex):
-                self[benchmark['name']] = benchmark
+            benchmark['_selected_idx'] = []
+            for idx, param_set in enumerate(
+                    itertools.product(*benchmark['params'])):
+                name = '%s(%s)' % (
+                    benchmark['name'],
+                    ', '.join(param_set))
+                if not regex or any(re.search(reg, name) for reg in regex):
+                    self[benchmark['name']] = benchmark
+                    benchmark['_selected_idx'].append(idx)
 
     @classmethod
     def disc_benchmarks(cls, conf, repo, environments):
