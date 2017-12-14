@@ -455,6 +455,8 @@ def check_output(args, valid_return_codes=(0,), timeout=600, dots=True,
                 if not c:
                     break
                 start_time[0] = time.time()
+                sys.stderr.write(c)
+                sys.stderr.flush()
                 stderr_chunks.append(c)
 
         def watcher_run():
