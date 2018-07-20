@@ -5,7 +5,9 @@ from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
 
 import itertools
+import re
 
+from .. import util
 from ..benchmarks import Benchmarks
 from ..benchmarks import _format_benchmark_result
 from ..machine import Machine
@@ -26,16 +28,19 @@ class Collect(Command):
         parser.add_argument(
             'range', nargs='?', default=None,
             help='Also display results for given range of commits')
+        parser.add_argument('--missing', action='store_true', help=(
+            'Display command to run missing results'))
         common_args.add_bench(parser)
         parser.set_defaults(func=cls.run_from_args)
         return parser
 
     @classmethod
     def run_from_conf_args(cls, conf, args, **kwargs):
-        return cls.run(conf=conf, bench=args.bench, range_spec=args.range)
+        return cls.run(conf=conf, bench=args.bench, range_spec=args.range,
+                       missing=args.missing)
 
     @classmethod
-    def run(cls, conf, bench=None, range_spec=None):
+    def run(cls, conf, bench=None, range_spec=None, missing=False):
         repo = get_repo(conf)
         if range_spec is None:
             commit_hashes = list(set([repo.get_hash_from_name(branch)
@@ -69,3 +74,16 @@ class Collect(Command):
                 log.info((
                     benchmark['name'] + " for commit " + commit_hash[:7] +
                     ":\n" + "\n".join(display)))
+                if missing:
+                    log.info(
+                        'Commands to run for missing results for {} on '
+                        'commit {}'.format(benchmark['name'], commit_hash[:7]))
+                    for result, param_set in zip(
+                        display_result, itertools.product(*benchmark['params'])
+                    ):
+                        if result[0] is None or util.is_nan(result[0]):
+                            benchmark_regexp = re.escape('{}({})'.format(
+                                benchmark['name'], ', '.join(param_set)))
+                            log.info('asv run {} --bench "{}"'.format(
+                                commit_hash[:7],
+                                benchmark_regexp))
